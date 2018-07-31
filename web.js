@@ -4,7 +4,7 @@ const request = require('request');
 
 // check upload directory
 var fs = require('fs');
-if (!fs.existsSync('./uploads')){
+if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
 
@@ -23,6 +23,14 @@ var storage = multer.diskStorage({
 var upload = multer({storage: storage}).single('alma');
 const app = express();
 
+app.use(function (req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    next();
+});
+
 /**
  * PORT NUMBER: 3000
  */
@@ -33,20 +41,20 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 
 app.get('/', function (req, res) {
-    res.send({data: 'hello world'});
+    res.send({status: 'hello world'});
 });
 
 app.post('/send/', function (req, res, next) {
     upload(req, res, function (err) {
         if (err) {
             console.log(err);
-            return res.end("Error");
+            return res.end({status: 'error'});
         }
-        res.send('file ok');
+        res.send({status: 'ok'});
     })
 });
 app.use(express.static('./_public'));
 
-app.listen( app.get('port'), function () {
-    console.log('running on port',  app.get('port'))
+app.listen(app.get('port'), function () {
+    console.log('running on port', app.get('port'))
 })
