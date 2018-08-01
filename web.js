@@ -17,7 +17,7 @@ var storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         console.log(file);
-        cb(null, Date.now() + ' - ' + file.originalname)
+        cb(null, 'a.tmp')
     }
 })
 var upload = multer({storage: storage}).single('alma');
@@ -50,7 +50,11 @@ app.post('/send/', function (req, res, next) {
             console.log(err);
             return res.end({status: 'error'});
         }
-        res.send({status: 'ok'});
+        res.send({
+            filename: 'hello.jpg',
+            thumbnailurl: 'https://picsum.photos/200/300/?id=1',
+        imageurl: 'https://picsum.photos/636/954/?id=1'
+    });
     })
 });
 app.use(express.static('./_public'));
