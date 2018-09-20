@@ -11,8 +11,11 @@ let hostName = '';
 
 // check upload directory
 var fs = require('fs');
-if (!fs.existsSync('./uploads')) {
-    fs.mkdirSync('./uploads');
+if (!fs.existsSync('_public/uploads/')) {
+    fs.mkdirSync(previewPath);
+}
+if (!fs.existsSync('_public/uploads/video/')) {
+    fs.mkdirSync(previewPath);
 }
 
 /**
@@ -121,26 +124,30 @@ app.post('/send/', function (req, res, next) {
         hostName = req.protocol + '://' + req.hostname + ':' + app.get('port');
         responseObject.path = hostName + '/uploads/' + req.file.originalname;
         responseObject.name = req.file.originalname;
-        console.log(fileType(buffer).mime);
+
         if (fileType(buffer).mime.startsWith('image')) {
+            //
+            //image
+            //
             resolutions.map((resolution) => {
                 createResolution(resolution, req.file);
                 responseObject.thumbnail_paths[resolution.key] = hostName + '/uploads/' + resolution.key + '/' + req.file.originalname;
             });
         } else if (fileType(buffer).mime.startsWith('video')) {
+            //
+            //video
+            //
             const previewPath = '_public/uploads/video/' + req.file.originalname;
             if (!fs.existsSync(previewPath)) {
                 fs.mkdirSync(previewPath);
             }
 
-
             var proc = ffmpeg('./_public/uploads/' + req.file.originalname)
-            // setup event handlers
                 .on('filenames', function (filenames) {
                     console.log('screenshots are ' + filenames.join(', '));
                 })
                 .on('end', function (files) {
-                    console.log('files',files);
+                    console.log('files', files);
                     console.log(req.file.originalname + ' - end');
                 })
                 .on('start', function () {
@@ -149,32 +156,11 @@ app.post('/send/', function (req, res, next) {
                 .on('error', function (err) {
                     console.log(req.file.originalname + ' an error happened: ' + err.message);
                 })
-                // take 2 screenshots at predefined timemarks and size
                 .takeScreenshots({
-                    count: 4,
+                    count: 3,
                     size: '178x100',
-                    filename: 'preview-%i.jpg',
                 }, './_public/uploads/video/' + req.file.originalname + '/');
-
-            /*
-            ffmpeg('./_public/uploads/' + req.file.originalname).screenshots({
-                // Will take screens at 20%, 40%, 60% and 80% of the video
-                count: 4,
-                folder: './_public/'
-            }).on('start', function () {
-                console.log('ffmpeg.start');
-            }).on('end', function () {
-                console.log('ffmpeg.end');
-            }).on('error', function () {
-                console.log('ffmpeg.error');
-            }).run();
-            */
         }
-
-        /*
-
-
-        */
         res.send(responseObject);
     })
 });
