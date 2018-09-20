@@ -56,7 +56,7 @@ function createResolution(size, file) {
  */
 responseObject = {
     "id": 1,
-    "ref_id": "5ba008dc3cf0c12b75581277",
+    "ref_id": "",
     "path": "",
     "thumbnail_paths": {},
     "preview_image_paths": {},
@@ -65,7 +65,7 @@ responseObject = {
     "order": "1",
     "is_default": false
 }
-
+/*
 responseList = {
     "content": [],
     "last": true,
@@ -77,7 +77,7 @@ responseList = {
     "number": 0
 
 }
-
+*/
 /**
  * resolution size
  * @type {*[]}
@@ -125,6 +125,17 @@ app.get('/', function (req, res) {
 });
 
 app.get('/list/', function (req, res) {
+    responseList = {
+        "content": [],
+        "last": true,
+        "total_pages": 1,
+        "total_elements": 1,
+        "first": true,
+        "number_of_elements": 1,
+        "size": 20,
+        "number": 0
+
+    }
     const files = [];
     HOSTNAME = req.protocol + '://' + req.hostname + ':' + app.get('port');
     fs.readdirSync(ROOT).forEach(file => {
@@ -132,10 +143,24 @@ app.get('/list/', function (req, res) {
             files.push(file);
         }
     });
+    let index = 0;
     files.map((file) => {
+        index++;
+        console.log(file);
         const buffer = readChunk.sync(ROOT + file, 0, 4100);
         if (fileType(buffer).mime.startsWith('image')) {
-            currentImage = responseObject;
+            const currentImage = {
+                "id": 1,
+                "ref_id": "",
+                "path": "",
+                "thumbnail_paths": {},
+                "preview_image_paths": {},
+                "name": "",
+                "type": "IMAGE",
+                "order": "1",
+                "is_default": false
+            };
+            currentImage.id = index;
             currentImage.name = file;
             currentImage.path = HOSTNAME + '/uploads/' + file;
             const thumbnail_paths = {};
@@ -145,17 +170,28 @@ app.get('/list/', function (req, res) {
             });
             currentImage.thumbnail_paths = thumbnail_paths;
             responseList.content.push(currentImage);
+            console.log(responseList.content);
         } else if (fileType(buffer).mime.startsWith('video')) {
-            currentImage = responseObject;
+            const currentImage = {
+                "id": 1,
+                "ref_id": "",
+                "path": "",
+                "thumbnail_paths": {},
+                "preview_image_paths": {},
+                "name": "",
+                "type": "IMAGE",
+                "order": "1",
+                "is_default": false
+            };
+            currentImage.id = index;
             currentImage.type = 'VIDEO';
             currentImage.name = file;
             currentImage.path = HOSTNAME + '/uploads/' + file;
-            currentImage.preview_image_paths = [HOSTNAME + '/uploads/video/' + file + '/fn_1.png'];
-            currentImage.thumbnail_paths = thumbnail_paths;
+            currentImage.preview_image_paths = [HOSTNAME + '/uploads/video/' + file + '/tn_1.png'];
             responseList.content.push(currentImage);
         }
     })
-    console.log(responseList);
+    //console.log(responseList);
     res.send(responseList);
 });
 
