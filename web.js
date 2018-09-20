@@ -157,9 +157,13 @@ app.post('/send/', function (req, res, next) {
                     console.log(req.file.originalname + ' an error happened: ' + err.message);
                 })
                 .takeScreenshots({
-                    count: 3,
+                    count: 2,
                     size: '178x100',
                 }, './_public/uploads/video/' + req.file.originalname + '/');
+            responseObject.preview_image_paths = [
+                hostName+'/uploads/video/' + req.file.originalname + '/tn_1.png',
+                hostName+'/uploads/video/' + req.file.originalname + '/tn_2.png'
+            ]
         }
         res.send(responseObject);
     })
