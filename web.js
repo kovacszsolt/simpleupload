@@ -3,13 +3,19 @@ const bodyParser = require('body-parser');
 const request = require('request');
 const path = require('path');
 const sharp = require('sharp');
+const readChunk = require('read-chunk');
+const fileType = require('file-type');
+var ffmpeg = require('fluent-ffmpeg');
 
 let hostName = '';
 
 // check upload directory
 var fs = require('fs');
-if (!fs.existsSync('./uploads')) {
-    fs.mkdirSync('./uploads');
+if (!fs.existsSync('_public/uploads/')) {
+    fs.mkdirSync(previewPath);
+}
+if (!fs.existsSync('_public/uploads/video/')) {
+    fs.mkdirSync(previewPath);
 }
 
 /**
@@ -52,8 +58,7 @@ responseObject = {
     "id": 1,
     "ref_id": "5ba008dc3cf0c12b75581277",
     "path": "",
-    "thumbnail_paths": {
-    },
+    "thumbnail_paths": {},
     "preview_image_paths": {},
     "name": "",
     "type": "IMAGE",
@@ -113,13 +118,53 @@ app.post('/send/', function (req, res, next) {
             console.log(err);
             return res.end({status: 'error'});
         }
+
+        const buffer = readChunk.sync('_public/uploads/' + req.file.originalname, 0, 4100);
+
         hostName = req.protocol + '://' + req.hostname + ':' + app.get('port');
         responseObject.path = hostName + '/uploads/' + req.file.originalname;
         responseObject.name = req.file.originalname;
-        resolutions.map((resolution) => {
-            createResolution(resolution, req.file);
-            responseObject.thumbnail_paths[resolution.key] = hostName + '/uploads/' + resolution.key + '/' + req.file.originalname;
-        });
+
+        if (fileType(buffer).mime.startsWith('image')) {
+            //
+            //image
+            //
+            resolutions.map((resolution) => {
+                createResolution(resolution, req.file);
+                responseObject.thumbnail_paths[resolution.key] = hostName + '/uploads/' + resolution.key + '/' + req.file.originalname;
+            });
+        } else if (fileType(buffer).mime.startsWith('video')) {
+            //
+            //video
+            //
+            const previewPath = '_public/uploads/video/' + req.file.originalname;
+            if (!fs.existsSync(previewPath)) {
+                fs.mkdirSync(previewPath);
+            }
+
+            var proc = ffmpeg('./_public/uploads/' + req.file.originalname)
+                .on('filenames', function (filenames) {
+                    console.log('screenshots are ' + filenames.join(', '));
+                })
+                .on('end', function (files) {
+                    console.log('files', files);
+                    console.log(req.file.originalname + ' - end');
+                })
+                .on('start', function () {
+                    console.log(req.file.originalname + ' start');
+                })
+                .on('error', function (err) {
+                    console.log(req.file.originalname + ' an error happened: ' + err.message);
+                })
+                .takeScreenshots({
+                    count: 2,
+                    size: '178x100',
+                }, './_public/uploads/video/' + req.file.originalname + '/');
+            responseObject.preview_image_paths = [
+                hostName+'/uploads/video/' + req.file.originalname + '/tn_1.png',
+                hostName+'/uploads/video/' + req.file.originalname + '/tn_2.png'
+            ]
+        }
         res.send(responseObject);
     })
 });
