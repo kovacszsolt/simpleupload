@@ -1,6 +1,9 @@
 # simpleupload server
 Store the file on Server  
 create different resolution from images
+create 4 thumbnail from video
+###requirement  
+  - ffmpeg
 ###start  
   - npm install
   - node web.js
