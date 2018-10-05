@@ -5,18 +5,8 @@ const path = require('path');
 const sharp = require('sharp');
 const readChunk = require('read-chunk');
 const fileType = require('file-type');
-var ffmpeg = require('fluent-ffmpeg');
-const ROOT = './_public/uploads/';
-let hostName = '';
-
-// check upload directory
-var fs = require('fs');
-if (!fs.existsSync('_public/uploads/')) {
-    fs.mkdirSync(previewPath);
-}
-if (!fs.existsSync('_public/uploads/video/')) {
-    fs.mkdirSync('_public/uploads/video/');
-}
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs-extra');
 
 /**
  * Image Resizer
@@ -40,18 +30,12 @@ function resize(width, height, sourceFile, targetFile) {
  * @param file
  */
 function createResolution(size, file) {
-    const targetPath = ROOT + size.key;
-    const originalPath = ROOT + file.originalname;
-    if (!fs.existsSync(targetPath)) {
-        fs.mkdirSync(targetPath);
-    }
+    const targetPath = CONFIG.image_directory + size.key;
+    const originalPath = CONFIG.image_directory + file.originalname;
+    fs.mkdirsSync(targetPath);
     resize(size.width, size.height, originalPath, targetPath + '/' + file.originalname);
 }
 
-/**
- * main response object
- * @type {{id: number, ref_id: string, path: string, thumbnail_paths: {}, preview_image_paths: {}, name: string, type: string, order: string, is_default: boolean}}
- */
 responseObject = {
     "id": 1,
     "ref_id": "",
@@ -63,23 +47,8 @@ responseObject = {
     "order": "1",
     "is_default": false
 }
-/*
-responseList = {
-    "content": [],
-    "last": true,
-    "total_pages": 1,
-    "total_elements": 1,
-    "first": true,
-    "number_of_elements": 1,
-    "size": 20,
-    "number": 0
 
-}
-*/
-/**
- * resolution size
- * @type {*[]}
- */
+// resolution size
 resolutions = [
     {key: 'S', width: 256, height: 144},
     {key: 'M', width: 640, height: 360},
@@ -87,18 +56,31 @@ resolutions = [
     {key: 'XL', width: 1280, height: 720}
 ];
 
+if (!fs.existsSync('./config.json')) {
+    console.log('No config file.');
+    console.log('create config.json file');
+    process.exit(1);
+}
+const CONFIG = require('./config.json');
+fs.mkdirsSync(CONFIG.source_directory);
+fs.mkdirsSync(CONFIG.image_directory);
+fs.mkdirsSync(CONFIG.video_directory);
 
-// upload file with multer
+let hostName = '';
+
+// upload file definition start
 var multer = require('multer');
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, ROOT)
+        cb(null, CONFIG.source_directory)
     },
     filename: function (req, file, cb) {
         cb(null, file.originalname);
     }
 })
-var upload = multer({storage: storage}).single('file');
+const upload = multer({storage: storage}).single('file');
+// upload file definition end
+
 const app = express();
 
 app.use(function (req, res, next) {
@@ -109,10 +91,7 @@ app.use(function (req, res, next) {
     next();
 });
 
-/**
- * PORT NUMBER: 3000
- */
-app.set('port', 3000);
+app.set('port', CONFIG.port);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -134,14 +113,12 @@ app.get('/list/', function (req, res) {
         }
     });
     const pageCount = Math.ceil(files.length / pageSize);
-    console.log('pageCount',pageCount);
     const indexStart = currentPage * (pageSize);
     const indexEnd = (currentPage + 1) * (pageSize);
     const imageList = files.slice(indexStart, indexEnd);
-    console.log(indexStart, indexEnd);
     responseList = {
         "content": [],
-        "last": (currentPage+1 === pageCount),
+        "last": (currentPage + 1 === pageCount),
         "total_pages": pageCount,
         "total_elements": files.length,
         "first": (currentPage === 0),
@@ -153,7 +130,8 @@ app.get('/list/', function (req, res) {
     let index = 0;
     imageList.map((file) => {
         index++;
-        const buffer = readChunk.sync(ROOT + file, 0, 4100);
+        console.log(CONFIG.source_directory + file);
+        const buffer = readChunk.sync(CONFIG.source_directory + file, 0, 4100);
         if (fileType(buffer).mime.startsWith('image')) {
             const currentImage = {
                 "id": 1,
@@ -196,7 +174,6 @@ app.get('/list/', function (req, res) {
             responseList.content.push(currentImage);
         }
     })
-   console.log(responseList);
     res.send(responseList);
 });
 
@@ -211,7 +188,7 @@ app.post('/send/', function (req, res, next) {
         responseObject.name = req.file.originalname;
 
 
-        const buffer = readChunk.sync(ROOT + req.file.originalname, 0, 4100);
+        const buffer = readChunk.sync(CONFIG.source_directory+ req.file.originalname, 0, 4100);
         if (fileType(buffer).mime.startsWith('image')) {
             //
             //image
@@ -261,3 +238,4 @@ app.use(express.static('./_public'));
 app.listen(app.get('port'), function () {
     console.log('running on port', app.get('port'))
 })
+w
