@@ -26,13 +26,11 @@ if (!fs.existsSync('_public/uploads/video/')) {
  * @param targetFile
  */
 function resize(width, height, sourceFile, targetFile) {
-    console.log(sourceFile);
     sharp(sourceFile)
         .rotate()
         .resize(width, height)
         .toFile(targetFile, (err, info) => {
             console.log('err', err);
-            console.log('info', info);
         });
 }
 
@@ -125,17 +123,9 @@ app.get('/', function (req, res) {
 });
 
 app.get('/list/', function (req, res) {
-    responseList = {
-        "content": [],
-        "last": true,
-        "total_pages": 1,
-        "total_elements": 1,
-        "first": true,
-        "number_of_elements": 1,
-        "size": 20,
-        "number": 0
+    const pageSize = req.query.size;
+    const currentPage = parseInt(req.query.page);
 
-    }
     const files = [];
     HOSTNAME = req.protocol + '://' + req.hostname + ':' + app.get('port');
     fs.readdirSync(ROOT).forEach(file => {
@@ -143,10 +133,26 @@ app.get('/list/', function (req, res) {
             files.push(file);
         }
     });
+    const pageCount = Math.ceil(files.length / pageSize);
+    console.log('pageCount',pageCount);
+    const indexStart = currentPage * (pageSize);
+    const indexEnd = (currentPage + 1) * (pageSize);
+    const imageList = files.slice(indexStart, indexEnd);
+    console.log(indexStart, indexEnd);
+    responseList = {
+        "content": [],
+        "last": (currentPage+1 === pageCount),
+        "total_pages": pageCount,
+        "total_elements": files.length,
+        "first": (currentPage === 0),
+        "number_of_elements": imageList.length,
+        "size": imageList.length,
+        "number": 0
+
+    }
     let index = 0;
-    files.map((file) => {
+    imageList.map((file) => {
         index++;
-        console.log(file);
         const buffer = readChunk.sync(ROOT + file, 0, 4100);
         if (fileType(buffer).mime.startsWith('image')) {
             const currentImage = {
@@ -170,7 +176,6 @@ app.get('/list/', function (req, res) {
             });
             currentImage.thumbnail_paths = thumbnail_paths;
             responseList.content.push(currentImage);
-            console.log(responseList.content);
         } else if (fileType(buffer).mime.startsWith('video')) {
             const currentImage = {
                 "id": 1,
@@ -191,7 +196,7 @@ app.get('/list/', function (req, res) {
             responseList.content.push(currentImage);
         }
     })
-    //console.log(responseList);
+   console.log(responseList);
     res.send(responseList);
 });
 
@@ -229,7 +234,6 @@ app.post('/send/', function (req, res, next) {
                     console.log('screenshots are ' + filenames.join(', '));
                 })
                 .on('end', function (files) {
-                    console.log('files', files);
                     console.log(req.file.originalname + ' - end');
                 })
                 .on('start', function () {
