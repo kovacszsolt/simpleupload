@@ -11,10 +11,10 @@ let hostName = '';
 
 // check upload directory
 var fs = require('fs');
-if (!fs.existsSync('_public/uploads/')) {
+if (!fs.existsSync(ROOT)) {
     fs.mkdirSync(previewPath);
 }
-if (!fs.existsSync('_public/uploads/video/')) {
+if (!fs.existsSync(ROOT+'video/')) {
     fs.mkdirSync('_public/uploads/video/');
 }
 
