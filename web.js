@@ -63,22 +63,9 @@ responseObject = {
     "order": "1",
     "is_default": false
 }
-/*
-responseList = {
-    "content": [],
-    "last": true,
-    "total_pages": 1,
-    "total_elements": 1,
-    "first": true,
-    "number_of_elements": 1,
-    "size": 20,
-    "number": 0
 
-}
-*/
 /**
  * resolution size
- * @type {*[]}
  */
 resolutions = [
     {key: 'S', width: 256, height: 144},
