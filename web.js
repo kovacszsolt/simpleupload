@@ -12,10 +12,10 @@ let hostName = '';
 // check upload directory
 var fs = require('fs');
 if (!fs.existsSync(ROOT)) {
-    fs.mkdirSync(previewPath);
+    fs.mkdirSync(ROOT);
 }
 if (!fs.existsSync(ROOT+'video/')) {
-    fs.mkdirSync('_public/uploads/video/');
+    fs.mkdirSync(ROOT+'video/');
 }
 
 /**
