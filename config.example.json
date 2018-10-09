@@ -1,0 +1,14 @@
+{
+  "port": 3000,
+  "source_directory": "./_public/uploads/tmp/",
+  "image_directory": "./_public/uploads/images/",
+  "video_directory": "./_public/uploads/videos/",
+  "image_path": "/uploads/images/",
+  "video_path": "/uploads/video/",
+  "video": {
+    "preview_count": 10,
+    "preview_width": 200,
+    "preview_height": 300,
+    "preview_name_prefix": "pr_"
+  }
+}
