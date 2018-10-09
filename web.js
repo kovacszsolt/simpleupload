@@ -2,51 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const path = require('path');
-const sharp = require('sharp');
-const readChunk = require('read-chunk');
-const fileType = require('file-type');
-const ffmpeg = require('fluent-ffmpeg');
+
 const fs = require('fs-extra');
 
-/**
- * Image Resizer
- * @param width
- * @param height
- * @param sourceFile
- * @param targetFile
- */
-function resize(width, height, sourceFile, targetFile) {
-    sharp(sourceFile)
-        .rotate()
-        .resize(width, height)
-        .toFile(targetFile, (err, info) => {
-            console.log('err', err);
-        });
-}
 
-/**
- * create images
- * @param size
- * @param file
- */
-function createResolution(size, file) {
-    const targetPath = CONFIG.image_directory + size.key;
-    const originalPath = CONFIG.image_directory + file.originalname;
-    fs.mkdirsSync(targetPath);
-    resize(size.width, size.height, originalPath, targetPath + '/' + file.originalname);
-}
+const list = require('./src/list.js');
+const upload = require('./src/upload.js');
 
-responseObject = {
-    "id": 1,
-    "ref_id": "",
-    "path": "",
-    "thumbnail_paths": {},
-    "preview_image_paths": {},
-    "name": "",
-    "type": "IMAGE",
-    "order": "1",
-    "is_default": false
-}
+
 
 // resolution size
 resolutions = [
@@ -78,7 +41,7 @@ var storage = multer.diskStorage({
         cb(null, file.originalname);
     }
 })
-const upload = multer({storage: storage}).single('file');
+const multerUpload = multer({storage: storage}).single('file');
 // upload file definition end
 
 const app = express();
@@ -101,141 +64,14 @@ app.get('/', function (req, res) {
     res.send({status: 'hello world'});
 });
 
-app.get('/list/', function (req, res) {
-    const pageSize = req.query.size;
-    const currentPage = parseInt(req.query.page);
 
-    const files = [];
-    HOSTNAME = req.protocol + '://' + req.hostname + ':' + app.get('port');
-    fs.readdirSync(ROOT).forEach(file => {
-        if (!fs.statSync(ROOT + file).isDirectory()) {
-            files.push(file);
-        }
-    });
-    const pageCount = Math.ceil(files.length / pageSize);
-    const indexStart = currentPage * (pageSize);
-    const indexEnd = (currentPage + 1) * (pageSize);
-    const imageList = files.slice(indexStart, indexEnd);
-    responseList = {
-        "content": [],
-        "last": (currentPage + 1 === pageCount),
-        "total_pages": pageCount,
-        "total_elements": files.length,
-        "first": (currentPage === 0),
-        "number_of_elements": imageList.length,
-        "size": imageList.length,
-        "number": 0
+list(app, CONFIG.source_directory);
 
-    }
-    let index = 0;
-    imageList.map((file) => {
-        index++;
-        console.log(CONFIG.source_directory + file);
-        const buffer = readChunk.sync(CONFIG.source_directory + file, 0, 4100);
-        if (fileType(buffer).mime.startsWith('image')) {
-            const currentImage = {
-                "id": 1,
-                "ref_id": "",
-                "path": "",
-                "thumbnail_paths": {},
-                "preview_image_paths": {},
-                "name": "",
-                "type": "IMAGE",
-                "order": "1",
-                "is_default": false
-            };
-            currentImage.id = index;
-            currentImage.name = file;
-            currentImage.path = HOSTNAME + '/uploads/' + file;
-            const thumbnail_paths = {};
-            resolutions.map((mapResponse) => {
-                thumbnail_paths[mapResponse.key] = HOSTNAME + '/uploads/' + mapResponse.key + '/' + file;
-
-            });
-            currentImage.thumbnail_paths = thumbnail_paths;
-            responseList.content.push(currentImage);
-        } else if (fileType(buffer).mime.startsWith('video')) {
-            const currentImage = {
-                "id": 1,
-                "ref_id": "",
-                "path": "",
-                "thumbnail_paths": {},
-                "preview_image_paths": {},
-                "name": "",
-                "type": "IMAGE",
-                "order": "1",
-                "is_default": false
-            };
-            currentImage.id = index;
-            currentImage.type = 'VIDEO';
-            currentImage.name = file;
-            currentImage.path = HOSTNAME + '/uploads/' + file;
-            currentImage.preview_image_paths = [HOSTNAME + '/uploads/video/' + file + '/tn_1.png'];
-            responseList.content.push(currentImage);
-        }
-    })
-    res.send(responseList);
-});
-
-app.post('/send/', function (req, res, next) {
-    upload(req, res, function (err) {
-        if (err) {
-            console.log(err);
-            return res.end({status: 'error'});
-        }
-        HOSTNAME = req.protocol + '://' + req.hostname + ':' + app.get('port');
-        responseObject.path = HOSTNAME + '/uploads/' + req.file.originalname;
-        responseObject.name = req.file.originalname;
+upload(app, multerUpload, CONFIG, resolutions);
 
 
-        const buffer = readChunk.sync(CONFIG.source_directory+ req.file.originalname, 0, 4100);
-        if (fileType(buffer).mime.startsWith('image')) {
-            //
-            //image
-            //
-            resolutions.map((resolution) => {
-                createResolution(resolution, req.file);
-                responseObject.thumbnail_paths[resolution.key] = HOSTNAME + '/uploads/' + resolution.key + '/' + req.file.originalname;
-            });
-        } else if (fileType(buffer).mime.startsWith('video')) {
-            //
-            //video
-            //
-            const previewPath = ROOT + req.file.originalname;
-            if (!fs.existsSync(previewPath)) {
-                fs.mkdirSync(previewPath);
-            }
-
-            var proc = ffmpeg(ROOT + req.file.originalname)
-                .on('filenames', function (filenames) {
-                    console.log('screenshots are ' + filenames.join(', '));
-                })
-                .on('end', function (files) {
-                    console.log(req.file.originalname + ' - end');
-                })
-                .on('start', function () {
-                    console.log(req.file.originalname + ' start');
-                })
-                .on('error', function (err) {
-                    console.log(req.file.originalname + ' an error happened: ' + err.message);
-                })
-                .takeScreenshots({
-                    count: 2,
-                    size: '178x100',
-                }, ROOT + 'video/' + req.file.originalname + '/');
-            responseObject.preview_image_paths = [
-                HOSTNAME + '/uploads/video/' + req.file.originalname + '/tn_1.png',
-                HOSTNAME + '/uploads/video/' + req.file.originalname + '/tn_2.png'
-            ]
-        }
-        res.send(responseObject);
-
-    })
-
-});
 app.use(express.static('./_public'));
 
 app.listen(app.get('port'), function () {
     console.log('running on port', app.get('port'))
 })
-w
