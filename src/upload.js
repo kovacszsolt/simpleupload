@@ -21,7 +21,9 @@ const resize = (width, height, sourceFile, targetFile) => {
         .rotate()
         .resize(width, height)
         .toFile(targetFile, (err, info) => {
-            console.log('err', err);
+            if (err !== null) {
+                console.log('err', err);
+            }
         });
 }
 
@@ -31,11 +33,12 @@ const createResolution = (__targetDirectory, __size, __sourceDirectory, __file) 
     resize(__size.width, __size.height, __sourceDirectory + __file.originalname, targetPath + '/' + __file.originalname);
 }
 
-const imageUpload = (__resolutions, __CONFIG, req) => {
+const imageUpload = (__resolutions, __CONFIG, req, HOSTNAME) => {
     __resolutions.map((resolution) => {
         createResolution(__CONFIG.image_directory, resolution, __CONFIG.source_directory, req.file);
         responseObject.thumbnail_paths[resolution.key] = HOSTNAME + __CONFIG.image_path + resolution.key + '/' + req.file.originalname;
     });
+    fs.copySync(__CONFIG.source_directory + req.file.originalname, __CONFIG.image_directory + req.file.originalname);
 }
 
 const videoUpload = (__CONFIG, req, HOSTNAME) => {
@@ -58,7 +61,7 @@ const videoUpload = (__CONFIG, req, HOSTNAME) => {
         })
         .takeScreenshots({
             count: __CONFIG.video.preview_count,
-            filename: __CONFIG.video.preview_name_prefix+ '%i.png',
+            filename: __CONFIG.video.preview_name_prefix + '%i.png',
             size: __CONFIG.video.preview_width + 'x' + __CONFIG.video.preview_height,
         }, __CONFIG.video_directory + req.file.originalname + '/');
     responseObject.preview_image_paths = [
@@ -75,13 +78,13 @@ module.exports = (__app, __multer, __CONFIG, __resolutions) => {
                 return res.end({status: 'error'});
             }
             const HOSTNAME = req.protocol + '://' + req.hostname + ':' + __app.get('port');
-            responseObject.path = HOSTNAME + '/uploads/' + req.file.originalname;
+            responseObject.path = HOSTNAME + __CONFIG.image_path + req.file.originalname;
             responseObject.name = req.file.originalname;
 
 
             const buffer = readChunk.sync(__CONFIG.source_directory + req.file.originalname, 0, 4100);
             if (fileType(buffer).mime.startsWith('image')) {
-                imageUpload(__resolutions, __CONFIG, req);
+                imageUpload(__resolutions, __CONFIG, req, HOSTNAME);
 
             } else if (fileType(buffer).mime.startsWith('video')) {
                 //

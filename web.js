@@ -2,8 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const path = require('path');
-
 const fs = require('fs-extra');
+
 
 
 const list = require('./src/list.js');
@@ -65,7 +65,7 @@ app.get('/', function (req, res) {
 });
 
 
-list(app, CONFIG.source_directory);
+list(app, CONFIG);
 
 upload(app, multerUpload, CONFIG, resolutions);
 

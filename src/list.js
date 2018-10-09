@@ -1,4 +1,7 @@
-module.exports = (__app, __sourcePath) => {
+const fs = require('fs-extra');
+const fileType = require('file-type')
+const readChunk = require('read-chunk');
+module.exports = (__app, __CONFIG) => {
 
     __app.get('/list/', function (req, res) {
         const files = [];
@@ -6,8 +9,8 @@ module.exports = (__app, __sourcePath) => {
         const pageSize = req.query.size;
         const currentPage = parseInt(req.query.page);
         const HOSTNAME = req.protocol + '://' + req.hostname + ':' + __app.get('port');
-        fs.readdirSync(ROOT).forEach(file => {
-            if (!fs.statSync(__sourcePath + file).isDirectory()) {
+        fs.readdirSync(__CONFIG.image_directory).forEach(file => {
+            if (!fs.statSync(__CONFIG.image_directory + file).isDirectory()) {
                 files.push(file);
             }
         });
@@ -29,8 +32,7 @@ module.exports = (__app, __sourcePath) => {
         let index = 0;
         imageList.map((file) => {
             index++;
-            console.log(CONFIG.source_directory + file);
-            const buffer = readChunk.sync(CONFIG.source_directory + file, 0, 4100);
+            const buffer = readChunk.sync(__CONFIG.image_directory + file, 0, 4100);
             if (fileType(buffer).mime.startsWith('image')) {
                 const currentImage = {
                     "id": 1,
@@ -45,10 +47,10 @@ module.exports = (__app, __sourcePath) => {
                 };
                 currentImage.id = index;
                 currentImage.name = file;
-                currentImage.path = HOSTNAME + '/uploads/' + file;
+                currentImage.path = HOSTNAME + __CONFIG.image_path + file;
                 const thumbnail_paths = {};
                 resolutions.map((mapResponse) => {
-                    thumbnail_paths[mapResponse.key] = HOSTNAME + '/uploads/' + mapResponse.key + '/' + file;
+                    thumbnail_paths[mapResponse.key] = HOSTNAME + __CONFIG.image_path + mapResponse.key + '/' + file;
 
                 });
                 currentImage.thumbnail_paths = thumbnail_paths;
@@ -69,7 +71,7 @@ module.exports = (__app, __sourcePath) => {
                 currentImage.type = 'VIDEO';
                 currentImage.name = file;
                 currentImage.path = HOSTNAME + '/uploads/' + file;
-                currentImage.preview_image_paths = [HOSTNAME + '/uploads/video/' + file + '/tn_1.png'];
+                currentImage.preview_image_paths = [HOSTNAME + __CONFIG.video_path + file + '/tn_1.png'];
                 responseList.content.push(currentImage);
             }
         })
